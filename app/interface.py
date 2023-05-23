@@ -7,12 +7,16 @@ class StartKeyboard:
         self.keyboard = InlineKeyboardMarkup()
         self.button_rate_teacher = InlineKeyboardButton(text=messages.BUTTON_RATE_TEACHER, callback_data="rate_teacher")
         self.button_add_teacher = InlineKeyboardButton(text=messages.BUTTON_ADD_TEACHER, callback_data="add_teacher")
-        self.keyboard.add(self.button_add_teacher, self.button_rate_teacher)
+        self.keyboard.add(self.button_add_teacher)
+        self.keyboard.add(self.button_rate_teacher)
 
         @dp.callback_query_handler(text="add_teacher")
         async def add_teacher(callback: CallbackQuery):
-            await callback.answer(text="Add")
+            await callback.answer(text="добавить")
+            await callback.message.answer("Добавить преподавателя")
 
         @dp.callback_query_handler(text="rate_teacher")
         async def add_teacher(callback: CallbackQuery):
-            await callback.answer(text="Rate")
+            await callback.answer(text="оценть")
+            await callback.message.answer("Оценить преподавателя")
+

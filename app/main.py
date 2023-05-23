@@ -19,9 +19,10 @@ async def start_handler(message: types.Message):
     kb = interface.StartKeyboard(dp).keyboard
     await message.answer(
         text=messages.START_MSG,
+        parse_mode="HTML",
         reply_markup=kb
     )
-
+    await message.delete()
 
 
 def main():
