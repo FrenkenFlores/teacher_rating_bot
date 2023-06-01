@@ -14,8 +14,9 @@ import pprint
 import time
 from aiogram.types import BotCommandScope, BotCommandScopeAllGroupChats
 from OptimizedDispatcher import OptimizedDispatcher
+import sql
 
-
+sql.connect_db()
 # Create Bot instance, Bot class inherits from BaseBot class that accepts in the __init__() magic method the
 # Telegram token. The token will be stored in Contextvar "BotDifferentToken". It will be used when a request will be
 # sent to https://api.telegram.org/bot<token>/METHOD_NAME with the aiohttp module. In general, Bot is the main interface
@@ -39,25 +40,28 @@ async def on_bot_startup(_):
     logging.info(f"Started bot with id={meta['id']}, first_name={meta['first_name']}, username={meta['username']}")
 
 
+
 @odp.message_handler(commands=["start"])
 async def start_handler(message: types.Message):
-    odp = Dispatcher.get_current()
-    kb = interface.StartKeyboard(odp).keyboard
+    """Handle /start command."""
+    cur_odp = Dispatcher.get_current()
+    start_keyboard = interface.StartKeyboard(cur_odp).keyboard
     await message.answer(
         text=messages.START_MSG,
         parse_mode="HTML",
-        reply_markup=kb
+        reply_markup=start_keyboard
     )
     await message.delete()
 
 
-@odp.message_handler(Text(equals=messages.HANDLER_ADD_TEACHER))
-async def start_handler(message: types.Message):
-    await message.delete()
 
 
 def main():
+    """The main function that will be launched once the file is executed."""
+    # Set logging format.
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+    # Start the bot. If skip_updates will be set to True, the bot will skip the requests that were sent
+    # while the bot was offline.
     executor.start_polling(
         dispatcher=odp,
         skip_updates=True,

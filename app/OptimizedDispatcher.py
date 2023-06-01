@@ -7,6 +7,7 @@ from aiohttp.helpers import sentinel
 import aiohttp
 import logging
 from aiogram.utils.mixins import DataMixin, ContextInstanceMixin
+import sql
 
 T = typing.TypeVar('T')
 
@@ -17,7 +18,7 @@ class OptimizedDispatcher(Dispatcher):
         # The key will be the id of the group, the value will hold
         # boolean values that indicates whether the bot is added or removed
         # or whether the bot is an admin or not.
-        self.groups = dict()
+        self.groups = sql.get_chats_dict_from_db()
         super().__init__(bot)
 
     def get_groups(self):
@@ -89,26 +90,46 @@ class OptimizedDispatcher(Dispatcher):
                             # The bot was added to the supergroup.
                             if updates_dict["my_chat_member"]["old_chat_member"]["status"] == "left" and \
                                 updates_dict["my_chat_member"]["new_chat_member"]["status"] == "member":
-                                self.groups[str(updates_dict["my_chat_member"]["chat"]["id"])] = {
+                                self.groups[updates_dict["my_chat_member"]["chat"]["id"]] = {
                                     "chat": copy.deepcopy(updates_dict["my_chat_member"]["chat"]),
                                     "bot_available": True,
                                     "bot_admin": False
                                 }
+                                sql.add_chat_to_db(
+                                    {
+                                        "id": updates_dict["my_chat_member"]["chat"]["id"],
+                                        "chat_title": updates_dict["my_chat_member"]["chat"]["title"],
+                                        "chat_type": updates_dict["my_chat_member"]["chat"]["type"],
+                                        "bot_available": True,
+                                        "bot_admin": False
+                                    }
+                                )
                             # the bot was removed from the supergroup.
                             elif updates_dict["my_chat_member"]["old_chat_member"]["status"] == "member" and \
                                 updates_dict["my_chat_member"]["new_chat_member"]["status"] == "left":
-                                if self.groups.get(str(updates_dict["my_chat_member"]["chat"]["id"])):
-                                    self.groups[str(updates_dict["my_chat_member"]["chat"]["id"])].update(
+                                if self.groups.get(updates_dict["my_chat_member"]["chat"]["id"]):
+                                    self.groups[updates_dict["my_chat_member"]["chat"]["id"]].update(
                                         {"bot_available": False}
                                     )
+                                    sql.delete_chat_from_db(id=updates_dict["my_chat_member"]["chat"]["id"])
                             # The bot status was changed to administrator.
                             elif updates_dict["my_chat_member"]["old_chat_member"].get("status") == "member" and \
                                 updates_dict["my_chat_member"]["new_chat_member"].get("status") == "administrator":
-                                self.groups[str(updates_dict["my_chat_member"]["chat"]["id"])].update({"bot_admin": True})
+                                self.groups[updates_dict["my_chat_member"]["chat"]["id"]].update({"bot_admin": True})
+                                sql.update_chat_in_db(
+                                    id=updates_dict["my_chat_member"]["chat"]["id"],
+                                    bot_available=self.groups[updates_dict["my_chat_member"]["chat"]["id"]]["bot_available"],
+                                    bot_admin=self.groups[updates_dict["my_chat_member"]["chat"]["id"]]["bot_admin"]
+                                )
                             # The bot status was changed to member.
                             elif updates_dict["my_chat_member"]["old_chat_member"].get("status") == "administrator" and \
                                 updates_dict["my_chat_member"]["new_chat_member"].get("status") == "member":
-                                self.groups[str(updates_dict["my_chat_member"]["chat"]["id"])].update({"bot_admin": False})
+                                self.groups[updates_dict["my_chat_member"]["chat"]["id"]].update({"bot_admin": False})
+                                sql.update_chat_in_db(
+                                    id=updates_dict["my_chat_member"]["chat"]["id"],
+                                    bot_available=self.groups[updates_dict["my_chat_member"]["chat"]["id"]]["bot_available"],
+                                    bot_admin=self.groups[updates_dict["my_chat_member"]["chat"]["id"]]["bot_admin"]
+                                )
                         else:
                             # Log the current event.
                             logging.debug(json.dumps(updates_dict, indent=4))

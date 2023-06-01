@@ -31,8 +31,8 @@ class StartKeyboard:
         @self.odp.callback_query_handler(text="add_teacher")
         async def add_teacher(callback: CallbackQuery):
             bot_id = callback.message["from"]["id"]
-            group_id = callback.message["chat"]["id"]
-            valid, msg = await self.check_groups(self, bot_id, group_id, check_admin=True)
+            user_id = callback.message["chat"]["id"]
+            valid, msg = await self.check_groups(self, bot_id, user_id, check_admin=True)
             if valid:
                 await callback.answer(text="добавить")
                 await callback.message.answer(msg)
