@@ -16,6 +16,7 @@ TYPE_TEACHER_NAME_ERROR_DUPLICATE = "Преподователь был ране�
 # Buttoms text.
 BUTTON_ADD_TEACHER = "👨‍🏫   Добавить преподвателя"
 BUTTON_RATE_TEACHER = "🏅   Оценить преподвателя"
+BUTTON_LIST_TEACHER = "📓   Список преподвателей"
 
 
 # Handler text.

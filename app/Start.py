@@ -5,7 +5,8 @@ from OptimizedDispatcher import OptimizedDispatcher
 import messages
 import json
 from aiogram.utils.callback_data import CallbackData
-
+from BotStates import BotStates
+import sql
 QUESTIONS_PATH = "questions.json"
 
 
@@ -87,49 +88,59 @@ class RateTeacherQuestion:
 
 
 
-class StartKeyboard:
+class Start:
     """This is the class that represents the starting window."""
     # The
     ADD_TEACHER_CB_DATA = "add_teacher"
     RATE_TEACHER_CB_DATA = "rate_teacher"
     GET_RATE_CB_DATA = "get_rate"
 
-    def __init__(self, odp: Dispatcher):
-        self.keyboard = InlineKeyboardMarkup()
-        self.button_rate_teacher = InlineKeyboardButton(text=messages.BUTTON_ADD_TEACHER, callback_data=self.ADD_TEACHER_CB_DATA)
-        self.button_add_teacher = InlineKeyboardButton(text=messages.BUTTON_RATE_TEACHER, callback_data=self.RATE_TEACHER_CB_DATA)
-        self.keyboard.add(self.button_add_teacher)
-        self.keyboard.add(self.button_rate_teacher)
-        self.odp = odp
+    def __init__(self, bot: Bot, dp: Dispatcher):
+        self.callback_filter = CallbackData("state", "start")
+        self.keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=messages.BUTTON_ADD_TEACHER, callback_data=self.callback_filter.new(self.ADD_TEACHER_CB_DATA))],
+            [InlineKeyboardButton(text=messages.BUTTON_RATE_TEACHER, callback_data=self.callback_filter.new(self.RATE_TEACHER_CB_DATA))],
+            [InlineKeyboardButton(text=messages.BUTTON_LIST_TEACHER, callback_data=self.callback_filter.new(self.GET_RATE_CB_DATA))]
+        ])
+        self.bot = bot
+        self.dp = dp
+        self.__register()
 
-        @self.odp.callback_query_handler(text=self.ADD_TEACHER_CB_DATA)
-        async def add_teacher(callback: CallbackQuery):
-            bot_id = callback.message["from"]["id"]
-            user_id = callback.message["chat"]["id"]
-            valid, msg = await self.check_groups(self, bot_id, user_id, check_admin=True)
-            if valid:
-                await AddTeacher(odp=self.odp, callback=callback).answer()
-            else:
-                await callback.answer(text="Ошибка")
-                await callback.message.answer(msg)
+    async def get_list(self, callback: CallbackQuery):
+        bot_id = callback.message["from"]["id"]
+        group_id = callback.message["chat"]["id"]
+        valid, msg = await self.check_groups(bot_id, group_id)
+        if valid:
+            await RateTeacherQuestion(odp=self.dp, callback=callback).answer()
+        else:
+            await callback.answer(text="Ошибка")
+            await callback.message.answer(msg)
 
-        @self.odp.callback_query_handler(text=self.RATE_TEACHER_CB_DATA)
-        async def rate_teacher(callback: CallbackQuery):
-            bot_id = callback.message["from"]["id"]
-            group_id = callback.message["chat"]["id"]
-            valid, msg = await self.check_groups(self, bot_id, group_id)
-            if valid:
-                await RateTeacherQuestion(odp=self.odp, callback=callback).answer()
-            else:
-                await callback.answer(text="Ошибка")
-                await callback.message.answer(msg)
+    async def add_teacher(self, callback: CallbackQuery):
+        bot_id = callback.message["from"]["id"]
+        user_id = callback.message["chat"]["id"]
+        valid, msg = await self.check_groups(bot_id, user_id, check_admin=True)
+        if valid:
+            await AddTeacher(odp=self.dp, callback=callback).answer()
+        else:
+            await callback.answer(text="Ошибка")
+            await callback.message.answer(msg)
 
+    async def rate_teacher(self, callback: CallbackQuery):
+        bot_id = callback.message["from"]["id"]
+        group_id = callback.message["chat"]["id"]
+        valid, msg = await self.check_groups(bot_id, group_id)
+        if valid:
+            await RateTeacherQuestion(odp=self.dp, callback=callback).answer()
+        else:
+            await callback.answer(text="Ошибка")
+            await callback.message.answer(msg)
 
     @staticmethod
-    async def check_groups(instance, bot_id: str, user_id: str, check_admin=False):
+    async def check_groups(bot_id: str, user_id: str, check_admin=False):
         """Check that the bot and user belong to the same group.
-        This funtcion returns a tuple that holds boolean indicator and string message."""
-        groups: dict = instance.odp.get_groups()
+        This function returns a tuple that holds boolean indicator and string message."""
+        groups: dict = sql.get_chats_dict_from_db()
         # Check if the bot is added to any group.
         if not groups:
             return False, messages.TYPE_TEACHER_NAME_ERROR_NO_GROUP
@@ -154,3 +165,9 @@ class StartKeyboard:
                         return False, messages.TYPE_TEACHER_NAME_ERROR_NO_ADMIN
                 return True, (messages.HANDLER_ADD_TEACHER if check_admin else messages.HANDLER_RATE_TEACHER)
         return False, messages.TYPE_TEACHER_NAME_ERROR_NO_USER
+
+    def __register(self):
+        self.dp.register_callback_query_handler(self.add_teacher, self.callback_filter.filter(start=self.ADD_TEACHER_CB_DATA))
+        self.dp.register_callback_query_handler(self.rate_teacher, self.callback_filter.filter(start=self.RATE_TEACHER_CB_DATA))
+        self.dp.register_callback_query_handler(self.get_list, self.callback_filter.filter(start=self.GET_RATE_CB_DATA))
+
