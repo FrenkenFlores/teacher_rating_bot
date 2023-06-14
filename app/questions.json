@@ -1,9 +1,7 @@
-[
-  "Question 1",
-  "Question 2",
-  "Question 3",
-  "Question 4",
-  "Question 5",
-  "Question 6",
-  "Question 7"
-]
+{
+  "q1": "Question 1",
+  "q2": "Question 2",
+  "q3": "Question 3",
+  "q4": "Question 4",
+  "q5": "Question 5"
+}

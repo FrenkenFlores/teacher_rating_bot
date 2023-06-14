@@ -25,7 +25,7 @@ class BotMiddleware(BaseMiddleware):
             # The bot was added to the supergroup.
             if update["my_chat_member"]["old_chat_member"]["status"] == "left" and \
                     update["my_chat_member"]["new_chat_member"]["status"] == "member":
-                if update["my_chat_member"]["chat"]["id"] not in self.groups:
+                if update["my_chat_member"]["chat"]["id"] in self.groups:
                     return
                 self.groups[update["my_chat_member"]["chat"]["id"]] = {
                     "chat": copy.deepcopy(update["my_chat_member"]["chat"]),
@@ -49,14 +49,14 @@ class BotMiddleware(BaseMiddleware):
                     self.groups[update["my_chat_member"]["chat"]["id"]].update(
                         {"bot_available": False}
                     )
-                    sql.delete_chat_from_db(id=update["my_chat_member"]["chat"]["id"])
+                    sql.delete_chat_from_db(chat_id=update["my_chat_member"]["chat"]["id"])
                     logging.info("delete_chat_from_db", self.groups[update["my_chat_member"]["chat"]["id"]])
             # The bot status was changed to administrator.
             elif update["my_chat_member"]["old_chat_member"].get("status") == "member" and \
                     update["my_chat_member"]["new_chat_member"].get("status") == "administrator":
                 self.groups[update["my_chat_member"]["chat"]["id"]].update({"bot_admin": True})
                 sql.update_chat_in_db(
-                    id=update["my_chat_member"]["chat"]["id"],
+                    chat_id=update["my_chat_member"]["chat"]["id"],
                     bot_available=self.groups[update["my_chat_member"]["chat"]["id"]]["bot_available"],
                     bot_admin=self.groups[update["my_chat_member"]["chat"]["id"]]["bot_admin"]
                 )
@@ -67,15 +67,14 @@ class BotMiddleware(BaseMiddleware):
                     update["my_chat_member"]["new_chat_member"].get("status") == "member":
                 self.groups[update["my_chat_member"]["chat"]["id"]].update({"bot_admin": False})
                 sql.update_chat_in_db(
-                    id=update["my_chat_member"]["chat"]["id"],
+                    chat_id=update["my_chat_member"]["chat"]["id"],
                     bot_available=self.groups[update["my_chat_member"]["chat"]["id"]]["bot_available"],
                     bot_admin=self.groups[update["my_chat_member"]["chat"]["id"]]["bot_admin"]
                 )
                 logging.info("update_chat_in_db", self.groups[update["my_chat_member"]["chat"]["id"]])
-        else:
-            # Log the current event.
-            logging.debug("update", update)
-            print(self.groups)
+        # Log the current event.
+        logging.debug("update", update)
+        logging.debug(str(self.groups))
 
     def get_groups(self):
         return self.groups
