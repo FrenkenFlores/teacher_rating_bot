@@ -1,13 +1,13 @@
+import asyncio
 import logging
 from aiogram import Bot, Dispatcher, executor
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, Update
+from aiogram.types import Message, CallbackQuery
 from aiogram.dispatcher.storage import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
-from aiogram.utils.callback_data import CallbackData
-import messages
+from app.Start import Start
+from app.Help import Help
+from app.BotMiddleware import BotMiddleware
 from BotStates import BotStates
-from Start import Start
-from BotMiddleware import BotMiddleware
 import sql
 
 class TelegramBot:
@@ -34,19 +34,22 @@ class TelegramBot:
         self.__register()
 
     async def __start_handler(self, message: Message, state: FSMContext):
-        # await state.set_state(BotStates.start)
-        await message.answer(
-            text=messages.START_MSG,
-            parse_mode="HTML",
-            reply_markup=Start(bot=self.bot, dp=self.dp).keyboard
-        )
+        await Start(bot=self.bot, dp=self.dp, message=message).answer()
 
+    async def __help_handler(self, message: Message, state: FSMContext):
+        await Help(bot=self.bot, dp=self.dp, message=message).answer()
 
     def __register(self):
         self.dp.middleware.setup(BotMiddleware())
         self.dp.register_message_handler(
             callback=self.__start_handler,
             commands=["start"],
+            state="*"
+        )
+        self.dp.register_message_handler(
+            callback=self.__help_handler,
+            commands=["help"],
+            state='*'
         )
 
     async def __on_bot_startup(self, dp: Dispatcher):
@@ -64,6 +67,5 @@ class TelegramBot:
         executor.start_polling(
             dispatcher=self.dp,
             skip_updates=True,
-            on_startup=self.__on_bot_startup,
-            on_shutdown=sql.close_db
+            on_startup=self.__on_bot_startup
         )

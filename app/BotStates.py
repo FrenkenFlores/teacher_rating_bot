@@ -4,5 +4,6 @@ class BotStates(StatesGroup):
     start = State()
     help = State()
     add = State()
+    remove = State()
     rate = State()
     get = State()
